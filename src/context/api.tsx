@@ -1,254 +1,256 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import axios, { AxiosResponse } from 'axios';
-import { AssetEntity, TreasuryEntity } from '../types/Treasury';
+import { AssetEntity, TreasuryEntity, SetAction } from '../types/Treasury';
 import { Table, Tbody, Td, Th, Thead, Tr } from '@chakra-ui/table';
 import { IconButton } from '@chakra-ui/button';
 import { FaSearchPlus } from 'react-icons/fa';
 import { Serie } from '@nivo/line';
-  import { Box } from '@chakra-ui/layout';
+import { Box } from '@chakra-ui/layout';
 import { Stat, StatGroup, StatLabel, StatNumber } from '@chakra-ui/stat';
-import { dailyPerformanceTarget } from '../utils';
+import { dailyPerformanceTarget, calculateChange, formatDateHour, numberWithCommas, camelToSpaced } from '../utils';
+import { DisplayAsset, MonthPerf, PartMonth, Total } from '../types/API';
 
-const numberWithCommas = (x: number | string) => x.toString().replace(/\B(?<!\.\d*)(?=(\d{3})+(?!\d))/g, ",");
+const totalsWithoutPercentageChange = (treasury: TreasuryEntity[]): Omit<Total, "percentageChange">[] => {
+  return treasury
+    .map(({ _id, treasury, createdAt }) => ({
+      _id,
+      treasury,
+      createdAt,
+      timestamp: new Date(createdAt).getTime()
+    }))
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+};
 
-interface Total extends Pick<TreasuryEntity, "_id" | "treasury" | "createdAt"> {
-  percentageChange: number;
-  timestamp: number;
+const totalsWithPercentageChange = (partialTotals: Omit<Total, "percentageChange">[]): Total[] => {
+  return partialTotals.map((total, idx) => {
+    if (idx === 0) {
+      return { ...total, percentageChange: 0 };
+    }
+    const previousTotal = partialTotals[idx - 1].treasury;
+    const percentageChange = calculateChange(total.treasury, previousTotal);
+    return {
+      ...total,
+      percentageChange,
+    };
+  });
+};
+
+const generatePieData = (total: TreasuryEntity) => total
+  .underlying_assets
+  .map(asset => ({
+    id: asset.protocol,
+    label: asset.protocol,
+    value: asset.total,
+    color: `hsl(${Math.round(Math.random() * 100)}, 70%, 50%)`
+  })
+);
+
+const getFirstTotalInAsset = (assets: AssetEntity[], assetName: string): number => {
+  /**
+   * @param assets - array of underlying assets
+   * @param assetName - protocol to search for
+   * @returns total value locked in the asset
+   */
+  const asset = assets.find(({ protocol }) => protocol === assetName);
+  return asset?.total ?? 0
 }
 
-interface DisplayAsset extends AssetEntity {
-  percentage: number;
-  initialValue: number;
-  performance: number;
-}
+const assetSplitByValue = (treasury: TreasuryEntity) => {
+  /**
+   * @returns the passed treasury record with the percentage split of
+   * each asset added, according to total value.
+   */
+  return treasury.underlying_assets.map(asset => ({
+    ...asset,
+    percentage: asset.total / treasury.treasury
+  }));
+};
+
+const generateAssetData = (selectedRecord: TreasuryEntity, baseAssets: AssetEntity[]) => {
+  /**
+   * split the assets by percentage of total value, then calculate the change in asset
+   * values since the base period.
+   */
+  const assetWithPercentage = assetSplitByValue(selectedRecord);
+  const sortedAssets = assetWithPercentage.sort((a, b) => b.total - a.total);
+  return sortedAssets.map(asset => {
+    const assetStartValue = getFirstTotalInAsset(baseAssets, asset.protocol);
+    return {
+      ...asset,
+      initialValue: assetStartValue,
+      performance: calculateChange(asset.total, assetStartValue)
+    }
+  });
+};
+
+const computeTotals = (treasury: TreasuryEntity[]): Total[] => {
+  /**
+   * @returns percentage change perfornace metrics for a given list
+   * of treasury records
+   */
+  const partialTotals = totalsWithoutPercentageChange(treasury);
+  return totalsWithPercentageChange(partialTotals);
+};
+
+const generateLineTotals = (total: Total[]) => ({
+  /**
+   * @returns a list of treasury records with the percentage change, in the correct
+   * format for the nivo line chart
+   */
+  id: "total",
+  color: "hsl(292, 70%, 50%)",
+  data: total.map(({ createdAt, treasury }) => ({
+      x: formatDateHour(createdAt),
+      y: treasury / 1_000_000
+    })
+  ),
+});
+
+const generateLineTargets = (total: Total[], targetAPR: number) => {
+  /**
+   * @param targetAPI is used to calcualte the benchmark
+   * @returns the target values for the treasury, at a given day, in a format ready
+   * for the nivo line chart
+   */
+  const baseTreasuryValue = total[0]?.treasury ?? 1;
+  const dailyPercentageTarget = 1 + (dailyPerformanceTarget(targetAPR)/100);
+  const dailyTreasuryTarget = (baseTreasuryValue / 1_000_000) * dailyPercentageTarget;
+  return {
+    id: "target",
+    color: "hsl(100, 70%, 50%)",
+    data: total.map(({ createdAt }) => ({
+        x: formatDateHour(createdAt),
+        y: dailyTreasuryTarget * new Date(createdAt).getDay()
+      })
+    )
+  }
+};
+
+const getSummaryStatistics = (filteredTotals: Total[], targetAPR: number) => {
+  const earliest = filteredTotals[0].createdAt;
+  const startPrice = filteredTotals[0].treasury;
+  const latest = filteredTotals[filteredTotals.length - 1].createdAt;
+  const latestPrice = filteredTotals[filteredTotals.length - 1].treasury;
+  const days = Math.ceil(new Date(latest).getDate() - new Date(earliest).getDate()) + 1;
+  const change = ((latestPrice - startPrice) / startPrice) * 100;
+  const target = dailyPerformanceTarget(targetAPR) * days;
+  return {
+    earliest: earliest.slice(0, 10),
+    latest: latest.slice(0, 10),
+    days, 
+    startPrice: `$ ${numberWithCommas(startPrice.toFixed(0))}`,
+    latestPrice: `$ ${numberWithCommas(latestPrice.toFixed(0))}`,
+    actual: `${change.toFixed(2)}%`,
+    targetForPeriod: `${target.toFixed(2)}%`,
+    versusBenchmark: `${(change - target).toFixed(2)}%`,
+  };
+};
+
+const getFirstInMonth = (recordsByDay) => recordsByDay.filter((day, index) => {
+  return index === 0 || day.month !== recordsByDay[index - 1].month;
+});
+
+const getLastInMonth = (recordsByDay) => recordsByDay.filter((day, index) => {
+  return index === recordsByDay.length - 1
+    || day.month !== recordsByDay[index + 1].month;
+});
+
+const removeDuplicateDays = (monthlyTotals) => monthlyTotals.filter((month, index) => {
+  return index === 0 ? true : month.day !== monthlyTotals[index - 1].day;
+});
+
+const getTotalsByMonth = (filteredTotals): PartMonth[] => {
+  const totalsByMonthAndDay = filteredTotals.map(total => ({
+    month: new Date(total.createdAt).getMonth(),
+    day: new Date(total.createdAt).getDay(),
+    ...total,
+  }));
+  return totalsByMonthAndDay.reduce((acc: PartMonth[], curr: any) => {
+    const month = new Date(curr.createdAt).getMonth();
+    const day = new Date(curr.createdAt).getDay();
+    const monthLabel = new Date(curr.createdAt).toLocaleString('default', { month: 'long' });
+    const monthValue = curr.treasury;
+    return [...acc, { month, day, monthLabel, monthValue }];
+  }, []);
+};
+
+const generateMonthlySummary = (totalsByMonth: PartMonth[], targetAPR: number): Array<MonthPerf | undefined> => {
+  const uniqueRecordsByDay = removeDuplicateDays(totalsByMonth);
+  const firstInMonth = getFirstInMonth(uniqueRecordsByDay);
+  const lastInMonth = getLastInMonth(uniqueRecordsByDay);
+  return firstInMonth.map((item: PartMonth, i: number) => {
+    if (item.month === lastInMonth[i].month) {
+      return {
+        month: item.month,
+        days: lastInMonth[i].day - item.day + 1,
+        monthLabel: item.monthLabel,
+        startValue: item.monthValue,
+        endValue: lastInMonth[i].monthValue,
+        performance: calculateChange(lastInMonth[i].monthValue, item.monthValue) * 100,
+        versusTarget: (lastInMonth[i].day - item.day + 1) * dailyPerformanceTarget(targetAPR)
+      }
+    }
+  })
+};
 
 const Api = ({ timeFrom, timeTo, setLineData, setPieData, targetAPR }:{
   timeFrom: number,
   timeTo: number | null,
-  setLineData: React.Dispatch<React.SetStateAction<Serie[]>>,
-  setPieData: React.Dispatch<React.SetStateAction<any>>,
+  setLineData: SetAction<Serie[]>,
+  setPieData: SetAction<any>,
   targetAPR: number;
 }): JSX.Element => {
-  const [treasury, setTreasury] = React.useState<TreasuryEntity[]>([]);
-  const [totals, setTotals] = React.useState<Total[]>([]);
-  const [asset, setAsset] = React.useState<DisplayAsset[]>([]);
+  const [treasury, setTreasury] = useState<TreasuryEntity[]>([]);
+  const [totals, setTotals] = useState<Total[]>([]);
+  const [asset, setAsset] = useState<DisplayAsset[]>([]);
+
+  const generateLineData = (total: Total[]): void => {
+    const lineData: Serie[] = [
+      generateLineTotals(total),
+      generateLineTargets(total, targetAPR)
+    ];
+    setLineData(lineData);
+  };
 
   useEffect(() => {
     generateLineData(totals)
   }, [targetAPR]);
+
   useEffect(() => {
     axios.get('http://localhost:3000/treasury').then((res: AxiosResponse<TreasuryEntity[]>) => {
-      
       setTreasury(res.data);
-      if (treasury && treasury[0]?.underlying_assets) setPieData(generatePieData(treasury[treasury.length - 1]));
-      
-      const partialTotals: Omit<Total, "percentageChange">[] = res.data
-        .map(({ _id, treasury, createdAt }) => ({
-            _id,
-            treasury,
-            createdAt,
-            timestamp: new Date(createdAt).getTime()
-          })
-        )
-        .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-      
-      const totals: Total[] = partialTotals.map((total, idx) => {
-          if (idx === 0) {
-            return { ...total, percentageChange: 0 };
-          }
-          const percentageChange = (total.treasury - partialTotals[idx - 1].treasury) / partialTotals[idx - 1].treasury;
-          return {
-            ...total,
-            percentageChange,
-          };
-        });
-      
-      // let prevCumulativeChange = 0;
-      
-      // const totals: Total[] = nonCumulativeTotals.map((total, index) => {
-      //   if (index === 0) {
-      //     return {
-      //       ...total,
-      //       cumulativeChange: 0,
-      //     }
-      //   } else {
-      //     const cumulativeChange = prevCumulativeChange + total.percentageChange;
-      //     prevCumulativeChange = cumulativeChange;
-      //     return {
-      //       ...total,
-      //       cumulativeChange
-      //     };
-      //   };
-      // });
-
+      if (treasury && treasury[0]?.underlying_assets) {
+        setPieData(generatePieData(treasury[treasury.length - 1]));
+      }
+      const totals = computeTotals(res.data);
       setTotals(totals);
       generateLineData(totals);
     });
   }, []);
 
-  const generatePieData = (total: TreasuryEntity) => total
-    .underlying_assets
-    .map(asset => ({
-      id: asset.protocol,
-      label: asset.protocol,
-      value: asset.total,
-      color: `hsl(${Math.round(Math.random() * 100)}, 70%, 50%)`
-    })
-  )
-
   const onClick = (id: string) => {
     const selectedRecord = treasury.find(({ _id }) => _id === id);
     if (selectedRecord) {
-
-      const selectedAssets = selectedRecord.underlying_assets
-      const sortedAssets = selectedAssets.sort((a, b) => b.total - a.total);
-      const assetWithPercentage = sortedAssets.map(asset => ({
-        ...asset, percentage: asset.total / selectedRecord.treasury }));
-      const assetZero = treasury[0].underlying_assets;
-      const assetWithStartValue = assetWithPercentage.map(asset => {
-        const startValue = assetZero.find(({ protocol }) => protocol === asset.protocol)?.total ?? 0;
-        return {
-          ...asset,
-          initialValue: startValue,
-          performance: (asset.total - startValue) / startValue
-        }
-      });
-      setAsset(assetWithStartValue);
+      const baseAssets = treasury[0].underlying_assets;
+      const assetData = generateAssetData(selectedRecord, baseAssets);
+      setAsset(assetData);
     }
-  };
-
-  const camelToSpaced = (str: string) => str.replace(/([A-Z])/g, ' $1').replace(/^./, (str) => str.toUpperCase());
-
-  const generateLineData = (total: Total[]): void => {
-    const baseTreasuryValue = total[0]?.treasury ?? 1;
-    console.debug({ target: dailyPerformanceTarget(targetAPR)})
-    const lineData: Serie[] = [
-      {
-        id: "total",
-        color: "hsl(292, 70%, 50%)",
-        data: total.map(({ createdAt, treasury }) => ({
-            x: `${
-              new Date(createdAt).getMonth()
-            }/${
-              new Date(createdAt).getDay()
-            } ${
-              new Date(createdAt).getHours()
-            }:00`,
-            y: treasury / 1_000_000
-          })
-        ),
-      },
-      {
-        id: "target",
-        color: "hsl(100, 70%, 50%)",
-        data: total.map(({ createdAt }) => ({
-            x: `${
-              new Date(createdAt).getMonth()
-            }/${
-              new Date(createdAt).getDay()
-            } ${
-              new Date(createdAt).getHours()
-            }:00`,
-            y: (baseTreasuryValue / 1_000_000) * (1 + (dailyPerformanceTarget(targetAPR)/100) * (new Date(createdAt).getDay()))
-          })
-        )
-      }
-    ];
-    setLineData(lineData);
   };
 
   let stats: any = {};
   let summary: any[] = [];
 
-  const filteredTotals = totals.filter(({ timestamp }) => (timestamp >= timeFrom) && (timestamp <= (timeTo ?? Infinity)));
+  const filteredTotals = totals.filter(({ timestamp }) => {
+    const dateIsAfterFrom = (timestamp >= timeFrom); 
+    const dateIsBeforeTo = (timestamp <= (timeTo ?? Infinity));
+    return dateIsAfterFrom && dateIsBeforeTo;
+  });
+
   if (filteredTotals[0]) {
-    const earliest = filteredTotals[0].createdAt;
-    const startPrice = filteredTotals[0].treasury;
-    const latest = filteredTotals[filteredTotals.length - 1].createdAt;
-    const latestPrice = filteredTotals[filteredTotals.length - 1].treasury;
-    const days = Math.ceil(new Date(latest).getDate() - new Date(earliest).getDate()) + 1;
-    const change = ((latestPrice - startPrice) / startPrice) * 100;
-    const target = dailyPerformanceTarget(targetAPR) * days;
-    stats = {
-      earliest: earliest.slice(0, 10),
-      latest: latest.slice(0, 10),
-      days, 
-      startPrice: `$ ${numberWithCommas(startPrice.toFixed(0))}`,
-      latestPrice: `$ ${numberWithCommas(latestPrice.toFixed(0))}`,
-      actual: `${change.toFixed(2)}%`,
-      targetForPeriod: `${target.toFixed(2)}%`,
-      versusBenchmark: `${(change - target).toFixed(2)}%`,
-    };
-
-    type Month = {
-      startValue: number,
-      endValue: number,
-      month: number,
-      day: number,
-      monthLabel: string,
-      monthValue: number,
-      performance: number,
-      // days: number,
-    }
-
-    type MonthPerf = {
-      startValue: number,
-      endValue: number,
-      month: number,
-      monthLabel: string,
-      performance: number,
-      days: number,
-    }
-
-    type PartMonth = Pick<Month, "month" | "day" | "monthLabel" | "monthValue">;
-    const months = filteredTotals.map(total => ({
-        month: new Date(total.createdAt).getMonth(),
-        day: new Date(total.createdAt).getDay(),
-        ...total,
-      })
-    );
-
-    const monthlyTotals: PartMonth[] = months.reduce((acc: PartMonth[], curr: any) => {
-      const month = new Date(curr.createdAt).getMonth();
-      const day = new Date(curr.createdAt).getDay();
-      const monthLabel = new Date(curr.createdAt).toLocaleString('default', { month: 'long' });
-      const monthValue = curr.treasury;
-      return [...acc, { month, day, monthLabel, monthValue }];
-    }
-    , []);
-
-    const removeDuplicateDays = monthlyTotals.filter((month, index) => {
-      if (index === 0) {
-        return true;
-      } else {
-        return month.day !== monthlyTotals[index - 1].day;
-      }
-    });
-
-    const firstInMonth = removeDuplicateDays.filter((day, index) => {
-      return index === 0 || day.month !== removeDuplicateDays[index - 1].month;
-    });
-
-    const lastInMonth = removeDuplicateDays.filter((day, index) => {
-      return index === removeDuplicateDays.length - 1 || day.month !== removeDuplicateDays[index + 1].month;
-    });
-
-    summary = firstInMonth.map((item: PartMonth, i: number) => {
-      if (item.month === lastInMonth[i].month) {
-        return {
-          month: item.month,
-          days: lastInMonth[i].day - item.day + 1,
-          monthLabel: item.monthLabel,
-          startValue: item.monthValue,
-          endValue: lastInMonth[i].monthValue,
-          performance: ((lastInMonth[i].monthValue - item.monthValue) / item.monthValue) * 100,
-          versusTarget: (lastInMonth[i].day - item.day + 1) * dailyPerformanceTarget(targetAPR)
-        }
-      }
-    })
+    stats = getSummaryStatistics(filteredTotals, targetAPR);
+    const monthlyTotals = getTotalsByMonth(filteredTotals);
+    summary = generateMonthlySummary(monthlyTotals, targetAPR);
   }
-
-
 
   return (
     filteredTotals[0] ?
@@ -308,7 +310,7 @@ const Api = ({ timeFrom, timeTo, setLineData, setPieData, targetAPR }:{
       <Tbody>
         {
           filteredTotals.map(
-            ({ treasury, createdAt, percentageChange, cumulativeChange, _id }) => (
+            ({ treasury, createdAt, percentageChange, _id }) => (
             <Tr textAlign="center">
               <Td textAlign="center">$ { numberWithCommas(Math.round(treasury)) }</Td>
               <Td textAlign="center">{ createdAt.slice(0, 16).replace("T", " ")}</Td>

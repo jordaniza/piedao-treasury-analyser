@@ -4,6 +4,7 @@ import {
   Box,
   VStack,
   Flex,
+  Heading,
   Grid,
   theme,
 } from "@chakra-ui/react"
@@ -21,13 +22,17 @@ export const App = () => {
   const [lineData, setLineData] = useState<Serie[]>([]);
   const [pieData, setPieData] = useState([]);
 
-  console.debug({ targetAPR });
 
   return (
     <ChakraProvider theme={theme}>
       <Box textAlign="center" fontSize="xl">
+          <ColorModeSwitcher
+            position="fixed"
+            top="0.2rem"
+            right="0.2rem"
+            justifySelf="flex-end" />
         <Grid minH="100vh" p={3}>
-          <ColorModeSwitcher justifySelf="flex-end" />
+          <Heading>PieDAO Treasury Tracker</Heading>
           <TimeSelector
             timeFrom={timeFrom}
             timeTo={timeTo}
