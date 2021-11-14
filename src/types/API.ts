@@ -1,8 +1,23 @@
+import { Serie } from "@nivo/line";
+import { PieData } from "./Chart";
 import { AssetEntity, TreasuryEntity } from "./Treasury"
 
 export type SetAction<T> = React.Dispatch<React.SetStateAction<T>>;
 export type PartMonth = Pick<Month, "month" | "day" | "monthLabel" | "monthValue">;
 
+export type ApiContextType = {
+  /**
+   * Caputures values saved from the api call into the shared state,
+   * saves prop drilling into nested components.
+   */
+  lineData: Serie[] | [];
+  pieData: PieData[] | [];
+  assetData: DisplayAsset[] | [];
+  totals: Total[] | [];
+  stats: any;
+  summary: any[];
+  onClick: (id: string) => void;
+}
 
 export interface Total extends Pick<TreasuryEntity, "_id" | "treasury" | "createdAt"> {
   /**

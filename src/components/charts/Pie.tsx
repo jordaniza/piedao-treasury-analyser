@@ -1,7 +1,8 @@
 import React from 'react';
 import { ResponsivePie } from '@nivo/pie'
+import { PieData } from '../../types/Chart';
 
-const MyResponsivePie = ({ data }: any): JSX.Element => {
+const MyResponsivePie = ({ data }: { data: PieData[]}): JSX.Element => {
   return (
     <ResponsivePie
         theme={
@@ -21,7 +22,7 @@ const MyResponsivePie = ({ data }: any): JSX.Element => {
         activeOuterRadiusOffset={8}
         borderWidth={1}
         borderColor={{ from: 'color', modifiers: [ [ 'darker', 0.2 ] ] }}
-        arcLabel={({ data }): any => `$${Math.round(data.value / 10_000) / 100} MM`}
+        arcLabel={({ data }) => `$${Math.round(data.value / 10_000) / 100} MM`}
         arcLabelsSkipAngle={10}
         arcLabelsTextColor="#000"
         enableArcLinkLabels={false}

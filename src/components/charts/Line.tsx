@@ -2,18 +2,6 @@ import { ResponsiveLine, Serie } from '@nivo/line';
 import React from 'react';
 
 const MyResponsiveLine = ({ data }: { data: Serie[]}): JSX.Element => { 
-  // const data = [
-  //     {
-  //       "id": "germany",
-  //       "color": "hsl(292, 70%, 50%)",
-  //       "data": [
-  //         {
-  //           "x": "plane",
-  //           "y": 182
-  //         },
-  //       ]
-  //     },
-  // ];
   return (
     <ResponsiveLine
         data={data}
@@ -55,14 +43,14 @@ const MyResponsiveLine = ({ data }: { data: Serie[]}): JSX.Element => {
         useMesh={true}
         legends={[
             {
-                anchor: 'bottom-right',
-                direction: 'column',
+                anchor: 'top-right',
+                direction: 'row',
                 justify: false,
-                translateX: 100,
-                translateY: 0,
+                translateY: -30,
                 itemsSpacing: 0,
                 itemDirection: 'left-to-right',
                 itemWidth: 80,
+                
                 itemHeight: 20,
                 itemOpacity: 0.75,
                 symbolSize: 12,

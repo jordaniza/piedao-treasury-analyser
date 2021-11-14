@@ -1,6 +1,8 @@
 import { FormControl, FormLabel } from "@chakra-ui/form-control";
 import { Input } from "@chakra-ui/input";
-import React from "react";
+import React, { useContext } from "react";
+import { ApiContext } from "../context/api";
+import { generateAssetData } from "../services/API";
 
 const TimeSelector = ({
   timeFrom,
@@ -18,11 +20,6 @@ const TimeSelector = ({
   setTargetAPR: (n: number) => void, 
 }): JSX.Element => {
 
-  const handleSubmit = (e: React.FormEvent<HTMLDivElement>): void => {
-    console.debug('Click')
-    e.preventDefault();
-    console.debug({ timeFrom, timeTo });
-  };
 
   const handleSetTimeFrom = (e: React.FormEvent<HTMLInputElement>): void => {
     setTimeFrom(Number(e.currentTarget.value));
@@ -36,7 +33,7 @@ const TimeSelector = ({
     setTargetAPR(Number(e.currentTarget.value));
   };
   return (
-    <FormControl id="time" onSubmit={handleSubmit}>
+    <FormControl id="time">
       <FormLabel>
         From:
         <Input type="number" value={timeFrom ?? 0} onChange={handleSetTimeFrom} />
@@ -49,7 +46,6 @@ const TimeSelector = ({
         Target APR:
         <Input type="number" value={targetAPR} onChange={handleSetTargetAPR}/>
       </FormLabel>
-      <Input type="submit" value="Submit" onClick={handleSubmit}/>
     </FormControl>
   );
 }

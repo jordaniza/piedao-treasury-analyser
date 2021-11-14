@@ -6,6 +6,11 @@
 //   return [...acc, { month, day, monthLabel, monthValue }];
 // }, []);
 
+import { MonthPerf, PartMonth, Total } from "../types/API";
+import { PieData } from "../types/Chart";
+import { AssetEntity, TreasuryEntity } from "../types/Treasury";
+import { calculateChange, dailyPerformanceTarget, formatDateHour, numberWithCommas } from "../utils";
+
 export const totalsWithoutPercentageChange = (treasury: TreasuryEntity[]): Omit<Total, "percentageChange">[] => {
   return treasury
     .map(({ _id, treasury, createdAt }) => ({
@@ -31,7 +36,7 @@ export const totalsWithPercentageChange = (partialTotals: Omit<Total, "percentag
   });
 };
 
-export const generatePieData = (total: TreasuryEntity) => total
+export const generatePieData = (total: TreasuryEntity): PieData[] => total
   .underlying_assets
   .map(asset => ({
     id: asset.protocol,
@@ -142,16 +147,16 @@ export const getSummaryStatistics = (totals: Total[], targetAPR: number) => {
   };
 };
 
-export const getFirstInMonth = (recordsByDay) => recordsByDay.filter((day, index) => {
+export const getFirstInMonth = (recordsByDay: PartMonth[]) => recordsByDay.filter((day, index) => {
   return index === 0 || day.month !== recordsByDay[index - 1].month;
 });
 
-export const getLastInMonth = (recordsByDay) => recordsByDay.filter((day, index) => {
+export const getLastInMonth = (recordsByDay: PartMonth[]) => recordsByDay.filter((day, index) => {
   return index === recordsByDay.length - 1
     || day.month !== recordsByDay[index + 1].month;
 });
 
-export const removeDuplicateDays = (monthlyTotals) => monthlyTotals.filter((month, index) => {
+export const removeDuplicateDays = (monthlyTotals: PartMonth[]) => monthlyTotals.filter((month, index) => {
   return index === 0 ? true : month.day !== monthlyTotals[index - 1].day;
 });
 
