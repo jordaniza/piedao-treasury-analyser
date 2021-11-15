@@ -1,52 +1,50 @@
 import React, { useState } from "react"
 import {
   ChakraProvider,
-  Box,
   VStack,
   Heading,
   theme,
+  Divider,
 } from "@chakra-ui/react"
-import { ColorModeSwitcher } from "./ColorModeSwitcher"
-import ApiContextProvider, { ApiContext } from "./context/api"
+import ApiContextProvider from "./context/api"
 import AssetContainer from "./components/AssetContainer"
 import TotalsAccordion from "./components/TotalsAccordion"
 import LineContainer from "./components/LineContainer"
 import SummaryStats from "./components/SummaryStats"
-import TimeSelector from "./components/TimeSelector"
+import TrackerControls from "./components/TrackerControls"
 
 export const App = () => {
-  const [timeFrom, setTimeFrom] = useState<number>(0);
-  const [timeTo, setTimeTo] = useState<number>(new Date().getTime());
+  const [days, setDays] = useState<number>(7);
   const [targetAPR, setTargetAPR] = useState(10);
+  const [refresh, setRefresh] = useState(0);
 
+  const refreshData = () => {
+    setRefresh(refresh + 1);
+  };
   return (
     <ChakraProvider theme={theme}>
-      <ColorModeSwitcher
-        position="fixed"
-        top="0.2rem"
-        right="0.2rem"
-        justifySelf="flex-end"
-      />
       <ApiContextProvider
-        timeFrom={timeFrom}
-        timeTo={timeTo}
+        days={days}
         targetAPR={targetAPR}
+        refresh={refresh}
       >
         <VStack spacing={10}>
         <Heading
           textAlign="center"
           my={10}
+          display="flex"
+          alignItems="center"
+          px={4}
         >
           PieDAO Treasury Tracker
         </Heading>
         <SummaryStats />
-        <TimeSelector
-          timeFrom={timeFrom}
-          timeTo={timeTo}
-          setTimeFrom={setTimeFrom}
-          setTimeTo={setTimeTo}
+        <TrackerControls
+          days={days}
+          setDays={setDays}
           targetAPR={targetAPR}
           setTargetAPR={setTargetAPR}
+          refreshData={refreshData}
         />
         <LineContainer />
         <TotalsAccordion />

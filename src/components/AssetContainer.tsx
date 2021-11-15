@@ -8,6 +8,7 @@ import {
   Thead,
   Tr,
   Td,
+  useBreakpointValue,
   Tbody,
 } from "@chakra-ui/react";
 import React, { useContext } from "react";
@@ -15,10 +16,18 @@ import { ApiContext } from "../context/api"
 import Pie from './charts/Pie'
 import { camelToSpaced, numberWithCommas } from "../utils"
 import { DisplayAsset } from "../types/API"
+import ComponentCard from "./ComponentCard";
 
-const AssetTable = ({ assetData }: { assetData: DisplayAsset[] }) => (
-  <Box>
-    <Table>
+const AssetTable = ({ assetData }: { assetData: DisplayAsset[] }) => {
+  const size = useBreakpointValue({ base: "sm", md: "md" });
+  return (
+    <Box
+      overflowX="scroll"
+      width="100%"
+    >
+      <Table
+        size={size}
+      >
         <Thead>
         <Tr>
           {
@@ -26,6 +35,7 @@ const AssetTable = ({ assetData }: { assetData: DisplayAsset[] }) => (
               .filter(k => k !== "assets" && k !== "debt")
               .map(k => (
                 <Th
+                  minWidth="120px"
                   key={k}
                   textAlign="center"
                 >{camelToSpaced(k)}
@@ -35,11 +45,15 @@ const AssetTable = ({ assetData }: { assetData: DisplayAsset[] }) => (
           }
         </Tr>
       </Thead>
-      <Tbody>
+      <Tbody
+        >
         {
           assetData.map(
             ({ network, protocol, total, percentage, initialValue, performance }, idx) => (
-            <Tr textAlign="center" key={idx}>
+            <Tr
+              textAlign="center"
+              key={idx}
+              >
               <Td textAlign="center">{ network }</Td>
               <Td textAlign="center">{ protocol }</Td>
               <Td textAlign="center">$ { numberWithCommas(Math.round(total)) }</Td>
@@ -53,30 +67,30 @@ const AssetTable = ({ assetData }: { assetData: DisplayAsset[] }) => (
       </Tbody>
     </Table>
   </Box>
-);
+)};
 
 const AssetContainer = (): JSX.Element => {
   const { pieData, assetData } = useContext(ApiContext);
   return (
-    <Flex
-      height="500px"
-      width="90%"
+    <ComponentCard
       flexDirection="column"
+      height="auto"
     >
       <Heading size="md">Asset Allocation</Heading>
       <Flex
         flexWrap="wrap"
-        height="500px"
+        minHeight="500px"
         flexDirection="row"
+        justifyContent="space-around"
         >
-        <Center width="40%" >
+        <Center width="600px" >
           { pieData.length > 0 ? <Pie data={pieData} /> : null }
         </Center>
-        <Center width="60%" >
+        <Center width="800px" maxWidth="100%" >
           { assetData.length > 0 ? <AssetTable assetData={assetData} /> : null }
         </Center>
       </Flex>
-    </Flex>
+    </ComponentCard>
   )
 };
 

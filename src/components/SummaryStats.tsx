@@ -7,17 +7,28 @@ import { camelToSpaced } from "../utils";
 const SummaryStats = (): JSX.Element => {
   const { stats } = useContext(ApiContext);
   return (
-    <Box width="90%">
+    <Box
+      >
         {
         Object.entries(stats).length > 0
-        ? <StatGroup>
+        ? <StatGroup
+          >
             {
               Object.entries(stats).map((value: any[], index) => (
                 <Stat
+                  my={5}
+                  display="flex"
+                  flexDirection="column"
+                  alignItems="center"
+                  justifyContent="center"
                   key={index}
                 >
-                  <StatLabel>{camelToSpaced(value[0])}</StatLabel>
+                  <StatLabel
+                    textAlign="center"
+                  >{camelToSpaced(value[0])}</StatLabel>
                   <StatNumber
+                    textAlign="center"
+                    width="180px"
                     color={
                       value[0] === "versusBenchmark"
                       ? (

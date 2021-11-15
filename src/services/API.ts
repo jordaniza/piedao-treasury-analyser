@@ -1,17 +1,13 @@
-// return totalsByMonthAndDay.reduce((acc: PartMonth[], curr: any) => {
-//   const month = new Date(curr.createdAt).getMonth();
-//   const day = new Date(curr.createdAt).getDay();
-//   const monthLabel = new Date(curr.createdAt).toLocaleString('default', { month: 'long' });
-//   const monthValue = curr.treasury;
-//   return [...acc, { month, day, monthLabel, monthValue }];
-// }, []);
-
 import { MonthPerf, PartMonth, Total } from "../types/API";
 import { PieData } from "../types/Chart";
 import { AssetEntity, TreasuryEntity } from "../types/Treasury";
 import { calculateChange, dailyPerformanceTarget, formatDateHour, numberWithCommas } from "../utils";
 
 export const totalsWithoutPercentageChange = (treasury: TreasuryEntity[]): Omit<Total, "percentageChange">[] => {
+  /**
+   * Converts the passed array of treasury objects into a reduced summarised form
+   * While adding a timestamp and sorting by recency.
+   */
   return treasury
     .map(({ _id, treasury, createdAt }) => ({
       _id,
@@ -23,6 +19,10 @@ export const totalsWithoutPercentageChange = (treasury: TreasuryEntity[]): Omit<
 };
 
 export const totalsWithPercentageChange = (partialTotals: Omit<Total, "percentageChange">[]): Total[] => {
+  /**
+   * Takes the summary totals (which have been sorted) and runs the percentage change
+   * formula, before returning the new array.
+   */
   return partialTotals.map((total, idx) => {
     if (idx === 0) {
       return { ...total, percentageChange: 0 };
@@ -107,6 +107,22 @@ export const generateLineTotals = (total: Total[]) => ({
   ),
 });
 
+const computeTarget = (baseValue: number, targetPercentage: number, days: number): number => {
+  /**
+   * @returns the daily target value for a given base value, percentage, and
+   * number of days
+   */
+  const increasePerDay = 1 + (targetPercentage / 100 / 365);
+  return baseValue * Math.pow(increasePerDay, days);
+}
+
+const daysBetweenTwoDates = (startDate: string, endDate: string): number => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
 export const generateLineTargets = (total: Total[], targetAPR: number) => {
   /**
    * @param targetAPI is used to calcualte the benchmark
@@ -114,20 +130,25 @@ export const generateLineTargets = (total: Total[], targetAPR: number) => {
    * for the nivo line chart
    */
   const baseTreasuryValue = total[0]?.treasury ?? 1;
-  const dailyPercentageTarget = 1 + (dailyPerformanceTarget(targetAPR)/100);
-  const dailyTreasuryTarget = (baseTreasuryValue / 1_000_000) * dailyPercentageTarget;
   return {
     id: "target",
     color: "hsl(100, 70%, 50%)",
-    data: total.map(({ createdAt }) => ({
+    data: total.map(({ createdAt }) => {
+      const days = daysBetweenTwoDates(total[0].createdAt, createdAt);
+      const targetValue = computeTarget(baseTreasuryValue, targetAPR, days);
+      return {
         x: formatDateHour(createdAt),
-        y: dailyTreasuryTarget * new Date(createdAt).getDay()
-      })
-    )
-  }
+        y: targetValue / 1_000_000
+      }
+    })
+  };
 };
 
 export const getSummaryStatistics = (totals: Total[], targetAPR: number) => {
+  /**
+   * @returns the headline stats for the DAO's treasury, over the given time period
+   * Taking into account the target percentage return over the year.
+   */
   const earliest = totals[0].createdAt;
   const startPrice = totals[0].treasury;
   const latest = totals[totals.length - 1].createdAt;

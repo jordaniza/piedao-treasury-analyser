@@ -17,16 +17,17 @@ export const ApiContext = createContext<ApiContextType>({
 });
 
 const ApiContextProvider = ({
-  timeFrom,
-  timeTo,
+  days,
   targetAPR,
   children,
+  refresh,
 }:{
-  timeFrom: number;
-  timeTo: number | null;
+  days: number;
   targetAPR: number;
   children: React.ReactNode;
+  refresh: number;
 }): JSX.Element => {
+
   const [treasury, setTreasury] = useState<TreasuryEntity[]>([]);
   const [totals, setTotals] = useState<Total[]>([]);
   const [assetData, setAssetData] = useState<DisplayAsset[]>([]);
@@ -41,24 +42,31 @@ const ApiContextProvider = ({
     setLineData(lineData);
   };
 
-  // useEffect(() => {
-  //   generateLineData(totals)
-  // }, [targetAPR]);
+  const getData = () => {
+    axios.get(`http://localhost:3000/treasury?days=${days ?? 7}`)
+      .then((res: AxiosResponse<TreasuryEntity[]>) => {
+        setTreasury(res.data);
+        if (treasury && treasury[0]?.underlying_assets) {
+          const mostRecentRecord = treasury[treasury.length - 1];
+          setPieData(generatePieData(mostRecentRecord));
+          updateAssetDataFromId(mostRecentRecord._id);
+        }
+        const totals = computeTotals(res.data);
+        setTotals(totals);
+        generateLineData(totals);
+      }
+    );
+  };
 
   useEffect(() => {
-    axios.get('http://localhost:3000/treasury').then((res: AxiosResponse<TreasuryEntity[]>) => {
-      setTreasury(res.data);
-      if (treasury && treasury[0]?.underlying_assets) {
-        setPieData(generatePieData(treasury[treasury.length - 3]));
-        onClick(treasury[treasury.length - 1]._id);
-      }
-      const totals = computeTotals(res.data);
-      setTotals(totals);
-      generateLineData(totals);
-    });
+    getData();
+  }, [refresh]);
+
+  useEffect(() => {
+    getData();
   }, []);
 
-  const onClick = (id: string) => {
+  const updateAssetDataFromId = (id: string) => {
     const selectedRecord = treasury.find(({ _id }) => _id === id);
     if (selectedRecord) {
       const baseAssets = treasury[0].underlying_assets;
@@ -70,14 +78,8 @@ const ApiContextProvider = ({
   let stats: any = {};
   let summary: any[] = [];
 
-  const filteredTotals = totals.filter(({ timestamp }) => {
-    const dateIsAfterFrom = (timestamp >= timeFrom); 
-    const dateIsBeforeTo = (timestamp <= (timeTo ?? Infinity));
-    return dateIsAfterFrom && dateIsBeforeTo;
-  });
-
-  if (filteredTotals[0]) {
-    stats = getSummaryStatistics(filteredTotals, targetAPR);
+  if (totals[0]) {
+    stats = getSummaryStatistics(totals, targetAPR);
     const totalsByMonthAndDay = getTotalsByMonthAndDay(totals);
     summary = generateMonthlySummary(totalsByMonthAndDay, targetAPR);
   }
@@ -87,10 +89,10 @@ const ApiContextProvider = ({
       lineData,
       pieData,
       assetData,
-      totals: filteredTotals,
+      totals,
       stats,
       summary,
-      onClick,
+      onClick: updateAssetDataFromId,
     }}>
       { children }
     </ApiContext.Provider>
