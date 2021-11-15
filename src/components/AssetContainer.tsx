@@ -22,7 +22,7 @@ const AssetTable = ({ assetData }: { assetData: DisplayAsset[] }) => {
   const size = useBreakpointValue({ base: "sm", md: "md" });
   return (
     <Box
-      overflowX="scroll"
+      overflowX="auto"
       width="100%"
     >
       <Table
@@ -82,8 +82,9 @@ const AssetContainer = (): JSX.Element => {
         minHeight="500px"
         flexDirection="row"
         justifyContent="space-around"
+        alignItems="center"
         >
-        <Center width="600px" >
+        <Center mt={5} width="600px" height="400px">
           { pieData.length > 0 ? <Pie data={pieData} /> : null }
         </Center>
         <Center width="800px" maxWidth="100%" >

@@ -27,6 +27,7 @@ const TotalsAccordion = (): JSX.Element => {
   return (
     <ComponentCard
       height="auto"
+      overflowY="auto"
     >
       <Accordion 
         width="100%"
@@ -61,6 +62,7 @@ const TotalsAccordion = (): JSX.Element => {
           <AccordionPanel
             pb={4}
             maxWidth="100%"
+            maxHeight="500px"
             >
           { totals.length > 0 ? <TotalsTable totals={totals} onClick={onClick}/> : null }
           </AccordionPanel>

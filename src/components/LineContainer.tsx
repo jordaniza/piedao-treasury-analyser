@@ -1,6 +1,6 @@
 import React from "react"
 import {
-  Heading,
+  Heading, Flex
 } from "@chakra-ui/react"
 import { ApiContext } from "../context/api"
 import Line from './charts/Line'
@@ -11,11 +11,18 @@ const LineContainer = (): JSX.Element => {
   return (
     <ComponentCard
       flexDirection="column"
+      overflowX="auto"
     >
       <Heading
         size="lg"
+        mt={2}
       >Performance Tracker vs Target</Heading>
-      <Line data={lineData} />
+      <Flex
+        minWidth="700px"
+        height="95%"
+      >
+        <Line data={lineData} />
+      </Flex>
     </ComponentCard>
   )
 };

@@ -1,32 +1,42 @@
 import React from 'react';
-import { ResponsivePie } from '@nivo/pie'
+import { ComputedDatum, ResponsivePie } from '@nivo/pie'
 import { PieData } from '../../types/Chart';
+import { useBreakpointValue } from '@chakra-ui/media-query';
 
+const format = ({label, value}: ComputedDatum<PieData>) => `${label} - $ ${Math.round( value/ 10_000) / 100} MM`;
 const MyResponsivePie = ({ data }: { data: PieData[]}): JSX.Element => {
+  const isMobile = useBreakpointValue({ sm: false, md: true, });
   return (
     <ResponsivePie
         theme={
           {
             tooltip: {
+
               container: {
                 color: '#000',
-              }
+              },
+
             }
           }
         }
         data={data}
-        margin={{ top: 40, right: 80, bottom: 80, left: 80 }}
+        margin={{ top: 20, right: 40, bottom: 20, left: 40 }}
         innerRadius={0.5}
+        tooltip={(data) => (
+          <div
+            style={{ background: '#000', color: '#fff', padding: '10px' }}>
+              {format(data.datum)}
+          </div>
+        )}
         padAngle={0.7}
         cornerRadius={3}
         activeOuterRadiusOffset={8}
         borderWidth={1}
         borderColor={{ from: 'color', modifiers: [ [ 'darker', 0.2 ] ] }}
-        arcLabel={({ data }) => `$${Math.round(data.value / 10_000) / 100} MM`}
+        arcLabel={data => format(data)}
         arcLabelsSkipAngle={10}
         arcLabelsTextColor="#000"
         enableArcLinkLabels={false}
-        
         defs={[
             {
                 id: 'dots',
@@ -47,13 +57,11 @@ const MyResponsivePie = ({ data }: { data: PieData[]}): JSX.Element => {
                 spacing: 10
             }
         ]}
-        legends={[
+        legends={isMobile ? [
             {
                 anchor: 'left',
                 direction: 'column',
                 justify: false,
-                translateX: 0,
-                translateY: 56,
                 itemsSpacing: 0,
                 itemWidth: 100,
                 itemHeight: 50,
@@ -66,12 +74,12 @@ const MyResponsivePie = ({ data }: { data: PieData[]}): JSX.Element => {
                     {
                         on: 'hover',
                         style: {
-                            itemTextColor: '#000'
-                        }
+                            itemTextColor: '#000', 
+                        },
                     }
                 ]
             }
-        ]}
+        ] : undefined }
     />
   )}
 
