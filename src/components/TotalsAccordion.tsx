@@ -18,12 +18,12 @@ import {
 } from "@chakra-ui/react"
 import { ApiContext } from "../context/api"
 import { camelToSpaced, numberWithCommas } from "../utils"
-import { Total } from "../types/API"
+import { MonthlySummary, HeadlineStats, Total } from "../types/API"
 import { FaSearchPlus } from "react-icons/fa"
 import ComponentCard from "./ComponentCard";
 
 const TotalsAccordion = (): JSX.Element => {
-  const { totals, summary, onClick } = React.useContext(ApiContext);
+  const { totals, monthlySummary, onClick } = React.useContext(ApiContext);
   return (
     <ComponentCard
       height="auto"
@@ -46,7 +46,7 @@ const TotalsAccordion = (): JSX.Element => {
             pb={4}
             maxWidth="100%"
           >
-          { summary.length > 0 ? <MonthlyTable summary={summary} /> : null }
+          { monthlySummary.length > 0 ? <MonthlyTable monthlySummary={monthlySummary} /> : null }
           </AccordionPanel>
         </AccordionItem>      
         <AccordionItem
@@ -72,11 +72,11 @@ const TotalsAccordion = (): JSX.Element => {
   )
 };
 
-const MonthlyTable = ({ summary }: any): JSX.Element => {
+const MonthlyTable = ({ monthlySummary }: { monthlySummary: MonthlySummary[] }): JSX.Element => {
   const size = useBreakpointValue({ base: "sm", md: "md" });
   return (
     <Box
-      overflowX="scroll"
+      overflowX="auto"
       width="100%"
     >
       <Table
@@ -85,18 +85,20 @@ const MonthlyTable = ({ summary }: any): JSX.Element => {
         <Thead>
           <Tr>
           {
-            Object.keys(summary[0])
-              .filter(key => key !== "month" && key !== "startValue" && key !== "endValue")
+            Object.keys(monthlySummary[0])
+              .filter(key => key !== "month")
               .map(k => (<Th minWidth="150px" key={k} textAlign="center">{camelToSpaced(k)}</Th>))
           }
           </Tr>
         </Thead>
         <Tbody>
           {
-            summary.map(s => (
+            monthlySummary.map(s => (
               <Tr textAlign="center" key={s.month}>
                 <Td textAlign="center">{ s.days }</Td>
                 <Td textAlign="center">{ s.monthLabel }</Td>
+                <Td textAlign="center">$ { numberWithCommas(Math.round(s.startValue)) }</Td>
+                <Td textAlign="center">$ { numberWithCommas(Math.round(s.endValue)) }</Td>
                 <Td textAlign="center">{ Math.round(s.performance * 100) / 100 }%</Td>
                 <Td textAlign="center">{ Math.round(s.versusTarget * 100) / 100 }%</Td>
               </Tr>

@@ -14,8 +14,8 @@ export type ApiContextType = {
   pieData: PieData[] | [];
   assetData: DisplayAsset[] | [];
   totals: Total[] | [];
-  stats: any;
-  summary: any[];
+  stats: HeadlineStats;
+  monthlySummary: MonthlySummary[];
   onClick: (id: string) => void;
 }
 
@@ -49,14 +49,29 @@ export type Month = {
   performance: number,
 }
 
-export type MonthPerf = {
+export type MonthlySummary = {
   /**
    * Summary performance of the month
    */
-  startValue: number,
-  endValue: number,
-  month: number,
-  monthLabel: string,
-  performance: number,
-  days: number,
+   month: number;
+   days: number;
+   monthLabel: string;
+   startValue: number;
+   endValue: number;
+   performance: number;
+   versusTarget: number;
 }
+
+export type HeadlineStats = {
+  /**
+   * Summary statistics of the treasury across the whole time period
+   */
+  earliest: string;
+  latest: string;
+  days: number;
+  startPrice: string;
+  latestPrice: string;
+  actual: string;
+  targetForPeriod: string;
+  versusBenchmark: string;
+};

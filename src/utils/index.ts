@@ -37,5 +37,21 @@ export const formatDateHour = (date: string) => {
    * Line chart date formatting
    */
   const dateObj = new Date(date);
-  return `${dateObj.getMonth()}/${dateObj.getDay()} ${dateObj.getHours()}:00`
+  return `${dateObj.getMonth()}/${dateObj.getDate()} ${dateObj.getHours()}:00`
 };
+
+export const daysBetweenTwoDates = (startDate: string, endDate: string): number => {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffTime = Math.abs(end.getTime() - start.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+}
+
+export const computeTarget = (baseValue: number, targetPercentage: number, days: number): number => {
+  /**
+   * @returns the daily target value for a given base value, percentage, and
+   * number of days
+   */
+  const increasePerDay = 1 + dailyPerformanceTarget(targetPercentage) / 100;
+  return baseValue * Math.pow(increasePerDay, days);
+}

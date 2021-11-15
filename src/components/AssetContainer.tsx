@@ -35,7 +35,7 @@ const AssetTable = ({ assetData }: { assetData: DisplayAsset[] }) => {
               .filter(k => k !== "assets" && k !== "debt")
               .map(k => (
                 <Th
-                  minWidth="120px"
+                  minWidth="150px"
                   key={k}
                   textAlign="center"
                 >{camelToSpaced(k)}
@@ -87,7 +87,7 @@ const AssetContainer = (): JSX.Element => {
         <Center mt={5} width="600px" height="400px">
           { pieData.length > 0 ? <Pie data={pieData} /> : null }
         </Center>
-        <Center width="800px" maxWidth="100%" >
+        <Center width="900px" maxWidth="100%" >
           { assetData.length > 0 ? <AssetTable assetData={assetData} /> : null }
         </Center>
       </Flex>

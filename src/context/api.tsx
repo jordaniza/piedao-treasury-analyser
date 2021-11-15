@@ -2,17 +2,20 @@ import React, { useEffect, useState, createContext, Children } from 'react';
 import axios, { AxiosResponse } from 'axios';
 import { TreasuryEntity } from '../types/Treasury';
 import { Serie } from '@nivo/line';
-import { ApiContextType, DisplayAsset, Total } from '../types/API';
-import { computeTotals, generateAssetData, generateLineTargets, generateLineTotals, generateMonthlySummary, generatePieData, getSummaryStatistics, getTotalsByMonthAndDay } from '../services/API';
+import { ApiContextType, DisplayAsset, MonthlySummary, HeadlineStats, Total } from '../types/API';
 import { PieData } from '../types/Chart';
+import { generateLineTargets, generateLineTotals } from '../services/line';
+import { computeTotals } from '../services/totals';
+import { generateAssetData, generatePieData } from '../services/assets';
+import { generateMonthlySummary, getStats, getTotalsByMonthAndDay } from '../services/summary';
 
 export const ApiContext = createContext<ApiContextType>({
   lineData: [],
   pieData: [],
   assetData: [],
   totals: [],
-  stats: {},
-  summary: [],
+  stats: {} as HeadlineStats,
+  monthlySummary: [],
   onClick: () => {},
 });
 
@@ -46,11 +49,6 @@ const ApiContextProvider = ({
     axios.get(`http://localhost:3000/treasury?days=${days ?? 7}`)
       .then((res: AxiosResponse<TreasuryEntity[]>) => {
         setTreasury(res.data);
-        if (treasury && treasury[0]?.underlying_assets) {
-          const mostRecentRecord = treasury[treasury.length - 1];
-          setPieData(generatePieData(mostRecentRecord));
-          updateAssetDataFromId(mostRecentRecord._id);
-        }
         const totals = computeTotals(res.data);
         setTotals(totals);
         generateLineData(totals);
@@ -66,22 +64,30 @@ const ApiContextProvider = ({
     getData();
   }, []);
 
+  useEffect(() => {
+    if (treasury.length > 0) {
+      const mostRecentRecord = treasury[treasury.length - 1];
+      updateAssetDataFromId(mostRecentRecord._id);
+    }
+  }, [treasury])
+
   const updateAssetDataFromId = (id: string) => {
     const selectedRecord = treasury.find(({ _id }) => _id === id);
     if (selectedRecord) {
       const baseAssets = treasury[0].underlying_assets;
       const _assetData = generateAssetData(selectedRecord, baseAssets);
       setAssetData(_assetData);
+      setPieData(generatePieData(selectedRecord));
     }
   };
 
-  let stats: any = {};
-  let summary: any[] = [];
+  let stats = {} as HeadlineStats;
+  let monthlySummary: MonthlySummary[] = [];
 
   if (totals[0]) {
-    stats = getSummaryStatistics(totals, targetAPR);
+    stats = getStats(totals, targetAPR);
     const totalsByMonthAndDay = getTotalsByMonthAndDay(totals);
-    summary = generateMonthlySummary(totalsByMonthAndDay, targetAPR);
+    monthlySummary = generateMonthlySummary(totalsByMonthAndDay, targetAPR);
   }
 
   return (
@@ -91,7 +97,7 @@ const ApiContextProvider = ({
       assetData,
       totals,
       stats,
-      summary,
+      monthlySummary,
       onClick: updateAssetDataFromId,
     }}>
       { children }

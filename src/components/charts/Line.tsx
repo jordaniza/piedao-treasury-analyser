@@ -26,6 +26,13 @@ const MyResponsiveLine = ({ data }: { data: Serie[]}): JSX.Element => {
             container: {
               color: '#000',
             }
+          },
+          grid: {
+            line: {
+              stroke: "darkgrey",
+              strokeWidth: 0.5,
+              strokeDasharray: "1 1"
+            }
           }
         }}
         axisLeft={{
@@ -42,6 +49,7 @@ const MyResponsiveLine = ({ data }: { data: Serie[]}): JSX.Element => {
         pointBorderWidth={2}
         pointBorderColor={{ from: 'serieColor' }}
         pointLabelYOffset={-12}
+        useMesh={true}
         legends={[
             {
                 anchor: 'top-right',
@@ -51,7 +59,6 @@ const MyResponsiveLine = ({ data }: { data: Serie[]}): JSX.Element => {
                 itemsSpacing: 0,
                 itemDirection: 'left-to-right',
                 itemWidth: 80,
-                
                 itemHeight: 20,
                 itemOpacity: 0.75,
                 symbolSize: 12,
