@@ -100,7 +100,7 @@ const MonthlyTable = ({ monthlySummary }: { monthlySummary: MonthlySummary[] }):
                 <Td textAlign="center">$ { numberWithCommas(Math.round(s.startValue)) }</Td>
                 <Td textAlign="center">$ { numberWithCommas(Math.round(s.endValue)) }</Td>
                 <Td textAlign="center">{ Math.round(s.performance * 100) / 100 }%</Td>
-                <Td textAlign="center">{ Math.round(s.versusTarget * 100) / 100 }%</Td>
+                <Td textAlign="center">{ Math.round(s.target * 100) / 100 }%</Td>
               </Tr>
               )
             )

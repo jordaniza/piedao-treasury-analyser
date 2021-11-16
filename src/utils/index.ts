@@ -41,10 +41,25 @@ export const formatDateHour = (date: string) => {
 };
 
 export const daysBetweenTwoDates = (startDate: string, endDate: string): number => {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffTime = Math.abs(end.getTime() - start.getTime());
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  /**
+   * This calculates the whole days that have passed between two dates.
+   * Does not include time differentials comprising a partial day, eg:
+   * 6pm Tuesday to 7pm Wednesday is 1 day, NOT 2 days.
+   */
+  const start = dateToDays(startDate);
+  const end = dateToDays(endDate);
+  return end - start;
+}
+
+const dateToDays = (date: string): number => {
+  /**
+   * Each new day, the target percentage is increased, so we
+   * @returns how many whole days have passed since the passed date
+   */
+  const dateObj = new Date(date);
+  const time = dateObj.getTime();
+  const timeToDays = time / (1000 * 60 * 60 * 24);
+  return Math.floor(timeToDays);
 }
 
 export const computeTarget = (baseValue: number, targetPercentage: number, days: number): number => {

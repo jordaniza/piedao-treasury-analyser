@@ -59,7 +59,7 @@ export type MonthlySummary = {
    startValue: number;
    endValue: number;
    performance: number;
-   versusTarget: number;
+   target: number;
 }
 
 export type HeadlineStats = {

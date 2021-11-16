@@ -14,7 +14,7 @@ export const totalsWithoutPercentageChange = (treasury: TreasuryEntity[]): Omit<
       createdAt,
       timestamp: new Date(createdAt).getTime()
     }))
-    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+    .sort((a, b) => a.timestamp - b.timestamp);
 };
 
 export const totalsWithPercentageChange = (partialTotals: Omit<Total, "percentageChange">[]): Total[] => {

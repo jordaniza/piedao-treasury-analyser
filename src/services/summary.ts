@@ -1,7 +1,5 @@
 import { MonthlySummary, PartMonth, HeadlineStats, Total } from "../types/API";
-import { PieData } from "../types/Chart";
-import { TreasuryEntity } from "../types/Treasury";
-import { calculateChange, dailyPerformanceTarget, daysBetweenTwoDates, formatDateHour, numberWithCommas } from "../utils";
+import { calculateChange, dailyPerformanceTarget, numberWithCommas } from "../utils";
 
 
 export const getStats = (totals: Total[], targetAPR: number): HeadlineStats => {
@@ -36,10 +34,6 @@ export const getLastInMonth = (recordsByDay: PartMonth[]) => recordsByDay.filter
   return index === recordsByDay.length - 1 || day.month !== recordsByDay[index + 1].month;
 });
 
-export const removeDuplicateDays = (monthlyTotals: PartMonth[]) => monthlyTotals.filter((month, index) => {
-  return index === 0 ? true : month.day !== monthlyTotals[index - 1].day;
-});
-
 export const getTotalsByMonthAndDay = (totals: Total[]): PartMonth[] => {
   /**
    * Returns the total value for the treasury, with the month and day added.
@@ -56,22 +50,23 @@ export const getTotalsByMonthAndDay = (totals: Total[]): PartMonth[] => {
 
 export const generateMonthlySummary = (totalsByMonthAndDay: PartMonth[], targetAPR: number): Array<MonthlySummary> => {
   /**
-   * Gets the first and last daily record in each month.
+   * Using only the first and last days found in each month:
    * @returns summary statistics and performance metrics for the month.
    */
-  const uniqueRecordsByDay = removeDuplicateDays(totalsByMonthAndDay);
-  const firstInMonth = getFirstInMonth(uniqueRecordsByDay);
-  const lastInMonth = getLastInMonth(uniqueRecordsByDay);
+  const firstInMonth = getFirstInMonth(totalsByMonthAndDay);
+  const lastInMonth = getLastInMonth(totalsByMonthAndDay);
+  console.debug({ firstInMonth, lastInMonth });
   return firstInMonth
-    .filter((item: PartMonth, i: number) => item.month === lastInMonth[i].month)
-    .map((item: PartMonth, i: number) => ({
-        month: item.month,
-        days: lastInMonth[i].day - item.day + 1,
-        monthLabel: item.monthLabel,
-        startValue: item.monthValue,
-        endValue: lastInMonth[i].monthValue,
-        performance: calculateChange(lastInMonth[i].monthValue, item.monthValue) * 100,
-        versusTarget: (lastInMonth[i].day - (item.day + 1)) * (1 + dailyPerformanceTarget(targetAPR))
-    })
-  );
+  .filter((item: PartMonth, i: number) => item.month === lastInMonth[i].month)
+  .map((item: PartMonth, i: number) => {
+    const daysInMonth = lastInMonth[i].day - (item.day) + 1;
+    return {  month: item.month,
+      days: daysInMonth,
+      monthLabel: item.monthLabel,
+      startValue: item.monthValue,
+      endValue: lastInMonth[i].monthValue,
+      performance: calculateChange(lastInMonth[i].monthValue, item.monthValue) * 100,
+      target: daysInMonth * dailyPerformanceTarget(targetAPR)
+    }
+  });
 };
