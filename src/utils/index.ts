@@ -48,10 +48,11 @@ export const daysBetweenTwoDates = (startDate: string, endDate: string): number 
    */
   const start = dateToDays(startDate);
   const end = dateToDays(endDate);
+  console.log(start, end);
   return end - start;
 }
 
-const dateToDays = (date: string): number => {
+export const dateToDays = (date: string): number => {
   /**
    * Each new day, the target percentage is increased, so we
    * @returns how many whole days have passed since the passed date
@@ -62,11 +63,15 @@ const dateToDays = (date: string): number => {
   return Math.floor(timeToDays);
 }
 
+export const periodTargetIncrease = (targetPercentage: number, days: number): number => {
+  const increasePerDay = 1 + dailyPerformanceTarget(targetPercentage) / 100;
+  return Math.pow(increasePerDay, days)
+}
+
 export const computeTarget = (baseValue: number, targetPercentage: number, days: number): number => {
   /**
    * @returns the daily target value for a given base value, percentage, and
    * number of days
    */
-  const increasePerDay = 1 + dailyPerformanceTarget(targetPercentage) / 100;
-  return baseValue * Math.pow(increasePerDay, days);
+  return baseValue * periodTargetIncrease(targetPercentage, days);
 }

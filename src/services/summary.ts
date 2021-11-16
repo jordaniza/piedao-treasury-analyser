@@ -55,7 +55,6 @@ export const generateMonthlySummary = (totalsByMonthAndDay: PartMonth[], targetA
    */
   const firstInMonth = getFirstInMonth(totalsByMonthAndDay);
   const lastInMonth = getLastInMonth(totalsByMonthAndDay);
-  console.debug({ firstInMonth, lastInMonth });
   return firstInMonth
   .filter((item: PartMonth, i: number) => item.month === lastInMonth[i].month)
   .map((item: PartMonth, i: number) => {

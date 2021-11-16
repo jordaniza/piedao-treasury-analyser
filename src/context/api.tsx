@@ -8,6 +8,7 @@ import { generateLineTargets, generateLineTotals } from '../services/line';
 import { computeTotals } from '../services/totals';
 import { generateAssetData, generatePieData } from '../services/assets';
 import { generateMonthlySummary, getStats, getTotalsByMonthAndDay } from '../services/summary';
+import { dateToDays, daysBetweenTwoDates } from '../utils';
 
 export const ApiContext = createContext<ApiContextType>({
   lineData: [],
@@ -18,6 +19,11 @@ export const ApiContext = createContext<ApiContextType>({
   monthlySummary: [],
   onClick: () => {},
 });
+
+const getStubData = async (days: number): Promise<{ data: TreasuryEntity[] }> => {
+  const { stubResponse } = await import('../__test__/stubs/treasuryEntity.stub');
+  return { data: stubResponse };
+};
 
 const ApiContextProvider = ({
   days,
@@ -46,8 +52,10 @@ const ApiContextProvider = ({
   };
 
   const getData = () => {
-    axios.get(`http://localhost:3000/treasury?days=${days ?? 7}`)
-      .then((res: AxiosResponse<TreasuryEntity[]>) => {
+    // axios.get(`http://localhost:3000/treasury?days=${days ?? 7}`)
+      // .then((res: AxiosResponse<TreasuryEntity[]>) => {
+    getStubData(days)
+      .then(res => {
         setTreasury(res.data);
         const totals = computeTotals(res.data);
         setTotals(totals);
