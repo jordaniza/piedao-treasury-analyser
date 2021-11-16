@@ -48,7 +48,6 @@ export const daysBetweenTwoDates = (startDate: string, endDate: string): number 
    */
   const start = dateToDays(startDate);
   const end = dateToDays(endDate);
-  console.log(start, end);
   return end - start;
 }
 

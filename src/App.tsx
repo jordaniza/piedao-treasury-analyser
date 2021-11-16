@@ -4,7 +4,6 @@ import {
   VStack,
   Heading,
   theme,
-  Divider,
 } from "@chakra-ui/react"
 import ApiContextProvider from "./context/api"
 import AssetContainer from "./components/AssetContainer"
